@@ -1,0 +1,19 @@
+Load data from CSV file: We load the data from a CSV file using pandas and map the ratings to categorical labels ('bad', 'neutral', 'good') using the map_rating function.
+
+Split data into train and test sets: We split the data into training and testing sets using train_test_split from scikit-learn.
+
+Preprocess text data: We tokenize the text data using TensorFlow's Tokenizer. We convert the text to sequences of integers (token indices) and pad the sequences to a fixed length (determined by the maximum sequence length in the data).
+
+Encode labels: We encode the categorical labels as integers and then convert them to one-hot encoded vectors using to_categorical.
+
+Define CNN architecture: We define the CNN architecture using TensorFlow's Keras API:
+    We create an Input layer specifying the shape as (max_length,) and the dtype as 'int32'. This layer represents the input tensor for our model, which will be the padded sequences of token indices.
+    We add this input_layer as the first layer in the Sequential model.
+    We add an Embedding layer to convert the token indices to dense vectors.
+    We add a Conv1D layer to apply 1D convolutions to the embedded sequences, followed by a MaxPooling1D layer for downsampling.
+    We add a Flatten layer to reshape the output from the previous layer into a 1D vector.
+    We add two Dense layers, with the final layer having len(unique_labels) units and a softmax activation function for multi-class classification.
+
+Compile and train the model: We compile the model with the appropriate loss function (categorical_crossentropy), optimizer (adam), and evaluation metric (accuracy). We then train the model using fit, passing in the preprocessed training data (X_train_padded and y_train_encoded), and specifying the validation data (X_test_padded and y_test_encoded).
+
+Evaluate the model: We evaluate the trained model on the test data using evaluate and print the test accuracy.
