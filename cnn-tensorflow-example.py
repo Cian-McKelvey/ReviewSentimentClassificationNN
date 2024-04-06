@@ -7,6 +7,8 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Conv1D, MaxPooling1D, Flatten, Dense, Input
 
+from text_processing import custom_preprocessor
+
 
 def map_rating(rating):
     if rating <= 2:
@@ -28,7 +30,7 @@ X = df['Review'].values  # numpy array of reviews
 y = df['Rating_Category'].values  # numpy array of categorical labels
 
 # Step 2: Split data into train and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
 print("Training data has been loaded.")
 
 # Step 3: Preprocess text data
@@ -59,7 +61,7 @@ input_layer = Input(shape=(max_length,), dtype='int32')
 model = Sequential([
     input_layer,
     Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100),
-    Conv1D(filters=128, kernel_size=5, activation='relu'),
+    Conv1D(filters=128, kernel_size=5, activation='relu'),  # This is the convolution layer making this a CNN
     MaxPooling1D(pool_size=2),
     Flatten(),
     Dense(64, activation='relu'),
@@ -68,8 +70,15 @@ model = Sequential([
 
 # Step 6: Compile and train the model,
 """
+0.2 Test Size
+
 10 Epochs = 100% while training and 84% while testing accuracy
 5 Epochs = 98% while training and 82% while testing accuracy
+
+
+0.4 Test Size
+
+5 Epochs = 99.7% while training and 82.4% while testing accuracy
 """
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 model.fit(X_train_padded, y_train_encoded, validation_data=(X_test_padded, y_test_encoded), epochs=5, batch_size=64)
