@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from keras import metrics  # Allows the reading of metrics while training
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -32,6 +33,26 @@ y = df['Rating_Category'].values  # numpy array of categorical labels
 # Step 2: Split data into train and test sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
 print("Training data has been loaded.")
+
+"""
+    Note: Cross fold validation can be added here by doing the following:
+
+    # Define the number of folds for cross-validation
+    n_folds = 5
+
+    # Define the K-fold cross-validator
+    kfold = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
+
+    # Define a list to store the evaluation results
+    cv_scores = []
+
+    # Iterate over the folds
+    for train_indices, val_indices in kfold.split(X_train, y_train):
+        # Split data into training and validation sets for this fold
+        X_train_fold, X_val_fold = X_train[train_indices], X_train[val_indices]
+        y_train_fold, y_val_fold = y_train[train_indices], y_train[val_indices]
+
+"""
 
 # Step 3: Preprocess text data
 tokenizer = Tokenizer()
@@ -80,9 +101,18 @@ model = Sequential([
 
 5 Epochs = 99.7% while training and 82.4% while testing accuracy
 """
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+#model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', metrics.Precision(), metrics.Recall(), metrics.F1Score()])
 model.fit(X_train_padded, y_train_encoded, validation_data=(X_test_padded, y_test_encoded), epochs=5, batch_size=64)
 
-# Step 7: Evaluate the model
-loss, accuracy = model.evaluate(X_test_padded, y_test_encoded)
+# Step 7: Evaluate the model - with just accuracy
+# loss, accuracy = model.evaluate(X_test_padded, y_test_encoded)
+# print("Test accuracy:", accuracy)
+
+# Step 7: Evaluate the model - With all the new metrics added
+results = model.evaluate(X_test_padded, y_test_encoded)
+loss = results[0]  # Extracting the loss value from the results list
+accuracy = results[1]  # Extracting the accuracy value from the results list
+# Can add more here for f1score, etc...
+print("Test loss:", loss)
 print("Test accuracy:", accuracy)
