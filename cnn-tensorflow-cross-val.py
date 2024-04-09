@@ -100,6 +100,8 @@ for train_indices, val_indices in kfold.split(X_train, y_train):
     # Store the accuracy for this fold
     cv_scores.append(accuracy)
 
+    model.summary()
+
 # Calculate the average accuracy across all folds
 avg_accuracy = np.mean(cv_scores)
 print("Average cross-validation accuracy:", avg_accuracy)

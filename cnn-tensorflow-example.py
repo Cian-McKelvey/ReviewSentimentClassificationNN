@@ -6,7 +6,7 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, Conv1D, MaxPooling1D, Flatten, Dense, Input
+from tensorflow.keras.layers import Embedding, Conv1D, MaxPooling1D, Flatten, Dense, Input, Dropout
 
 from text_processing import custom_preprocessor
 
@@ -79,13 +79,29 @@ y_test_encoded = to_categorical(y_test_encoded)
 # Step 5: Define CNN architecture, follow their guide from that saved link
 input_layer = Input(shape=(max_length,), dtype='int32')
 
+# model = Sequential([
+#     input_layer,
+#     Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100),
+#     Conv1D(filters=128, kernel_size=5, activation='relu'),  # This is the convolution layer(s) which extracts features
+#     MaxPooling1D(pool_size=2),  # Breaks the data into smaller sets (2 here) and takes the largest value
+#     Flatten(),
+#     Dense(64, activation='relu'),  # Relu makes sure that all negative values become positive
+#     Dense(len(unique_labels), activation='softmax')  # Softmax gives the probability, e.g. this is most likely positive
+# ])
+
+# New model with more layers
 model = Sequential([
     input_layer,
     Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100),
-    Conv1D(filters=128, kernel_size=5, activation='relu'),  # This is the convolution layer making this a CNN
+    Conv1D(filters=128, kernel_size=5, activation='relu'),
+    MaxPooling1D(pool_size=2),
+    Conv1D(filters=64, kernel_size=3, activation='relu'),
     MaxPooling1D(pool_size=2),
     Flatten(),
+    Dense(128, activation='relu'),
+    Dropout(0.5),
     Dense(64, activation='relu'),
+    Dropout(0.5),
     Dense(len(unique_labels), activation='softmax')
 ])
 
@@ -116,3 +132,5 @@ accuracy = results[1]  # Extracting the accuracy value from the results list
 # Can add more here for f1score, etc...
 print("Test loss:", loss)
 print("Test accuracy:", accuracy)
+print("\n\n\n\n\n\n\n\n\n")
+model.summary()
