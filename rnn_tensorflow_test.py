@@ -85,7 +85,7 @@ model.fit(X_train_padded, y_train_encoded, validation_data=(X_test_padded, y_tes
 
 """
 0.4 Test Size - 5 Epochs:
-Once Training has finished - accuracy: 0.9635 - f1_score: 0.9218 - loss: 0.1129 - precision: 0.9653 - recall: 0.9627
+Once Training has finished - accuracy: 0.9672 - f1_score: 0.9277 - loss: 0.1105 - precision: 0.9681 - recall: 0.9642
 Actual results - 
 """
 
