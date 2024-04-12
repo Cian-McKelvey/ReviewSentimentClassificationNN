@@ -1,14 +1,13 @@
 import pandas as pd
 import numpy as np
 from keras import metrics  # Allows the reading of metrics while training
+from keras.src.layers import Bidirectional
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, Conv1D, MaxPooling1D, Flatten, Dense, Input, Dropout
-
-from text_processing import custom_preprocessor
+from tensorflow.keras.layers import Embedding, Conv1D, MaxPooling1D, Flatten, Dense, Input, Dropout, LSTM
 
 
 def map_rating(rating):
@@ -18,6 +17,12 @@ def map_rating(rating):
         return 'neutral'
     else:
         return 'good'
+
+
+"""
+    Long Short-Term Memory Recurrent Neural Network Example - Remove stopwords such as if, and, or, while.
+    There are more preprocessing ones to use for this.
+"""
 
 
 # Step 1: Load data from CSV file
@@ -56,28 +61,15 @@ y_test_encoded = [label_to_int[label] for label in y_test]
 y_train_encoded = to_categorical(y_train_encoded)
 y_test_encoded = to_categorical(y_test_encoded)
 
-# Step 5: Define CNN architecture, follow their guide from that saved link
+# Step 5: Define RNN architecture
 input_layer = Input(shape=(max_length,), dtype='int32')
 
-# model = Sequential([
-#     input_layer,
-#     Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100),
-#     Conv1D(filters=128, kernel_size=5, activation='relu'),  # This is the convolution layer(s) which extracts features
-#     MaxPooling1D(pool_size=2),  # Breaks the data into smaller sets (2 here) and takes the largest value
-#     Flatten(),
-#     Dense(64, activation='relu'),  # Relu makes sure that all negative values become positive
-#     Dense(len(unique_labels), activation='softmax')  # Softmax gives the probability, e.g. this is most likely positive
-# ])
-
-# New model with more layers - This actually seems a little less accurate
+# New model with more layers
 model = Sequential([
     input_layer,
     Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100),
-    Conv1D(filters=128, kernel_size=5, activation='relu'),
-    MaxPooling1D(pool_size=2),
-    Conv1D(filters=64, kernel_size=3, activation='relu'),
-    MaxPooling1D(pool_size=2),
-    Flatten(),
+    Bidirectional(LSTM(64, return_sequences=True)),  # Bidirectional LSTM
+    Bidirectional(LSTM(32)),  # Bidirectional LSTM
     Dense(128, activation='relu'),
     Dropout(0.5),
     Dense(64, activation='relu'),
@@ -85,27 +77,17 @@ model = Sequential([
     Dense(len(unique_labels), activation='softmax')
 ])
 
-# Step 6: Compile and train the model,
-"""
-0.2 Test Size
-
-10 Epochs = 100% while training and 84% while testing accuracy
-5 Epochs = 98% while training and 82% while testing accuracy
-
-
-0.4 Test Size
-
-5 Epochs = 99.7% while training and 82.4% while testing accuracy
-"""
-
-
-# model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', metrics.Precision(), metrics.Recall(), metrics.F1Score()])
+# Step 6: Compile and train the model - Epochs was orignially 10, but has been reduced to 5
+model.compile(loss='categorical_crossentropy', optimizer='adam',
+              metrics=['accuracy', metrics.Precision(), metrics.Recall(), metrics.F1Score()])
 model.fit(X_train_padded, y_train_encoded, validation_data=(X_test_padded, y_test_encoded), epochs=5, batch_size=64)
 
-# Step 7: Evaluate the model - with just accuracy
-# loss, accuracy = model.evaluate(X_test_padded, y_test_encoded)
-# print("Test accuracy:", accuracy)
+
+"""
+0.4 Test Size - 5 Epochs:
+Once Training has finished - accuracy: 0.9635 - f1_score: 0.9218 - loss: 0.1129 - precision: 0.9653 - recall: 0.9627
+Actual results - 
+"""
 
 # Step 7: Evaluate the model - With all the new metrics added
 results = model.evaluate(X_test_padded, y_test_encoded)
