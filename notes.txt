@@ -1,0 +1,15 @@
+OG MODEL:
+12 Epochs
+Test loss: 0.8317489624023438
+Test accuracy: 0.816518247127533
+
+5 Epochs
+Test loss: 0.9033066034317017
+Test accuracy: 0.8220080733299255
+
+
+New Model:
+12 Epochs
+
+
+5 Epochs

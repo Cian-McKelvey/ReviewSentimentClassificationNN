@@ -1,6 +1,8 @@
 import nltk
+import pandas as pd
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
+from sklearn.utils import resample
 
 # Download required NLTK resources
 nltk.download('stopwords')
@@ -45,3 +47,12 @@ def preprocess_text(text, case=0, remove_stops=True, stem=True):
         text = ' '.join(stemmed_words)
 
     return text
+
+
+def map_rating(rating) -> str:
+    if rating <= 2:
+        return 'bad'
+    elif rating == 3:
+        return 'neutral'
+    else:
+        return 'good'

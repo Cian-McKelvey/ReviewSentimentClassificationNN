@@ -1,5 +1,7 @@
 import pandas as pd
-from keras import metrics  # Allows the reading of metrics while training
+
+from keras import metrics
+from keras.src.layers import GlobalMaxPooling1D
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
@@ -7,26 +9,11 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Conv1D, MaxPooling1D, Flatten, Dense, Input, Dropout
 
-from text_processing import preprocess_text
+import matplotlib.pyplot as plt
+from keras.regularizers import l2
 
 
-def map_rating(rating):
-    if rating <= 2:
-        return 'bad'
-    elif rating == 3:
-        return 'neutral'
-    else:
-        return 'good'
-
-
-# # This version of the method is wrong but it increases the accuracy to 91% from a model version that was 82% before
-# # This likely means that the neutral rating is decreasing accuracy significantly.
-# def map_rating(rating):
-#     if rating <= 2:
-#         return 'bad'
-#     else:
-#         return 'good'
-
+from text_processing import preprocess_text, map_rating
 
 # Step 1: Load data from CSV file
 df = pd.read_csv("datasets/tripadvisor_hotel_reviews.csv")
@@ -37,10 +24,17 @@ df['Review_Cleaned'] = df['Review'].apply(preprocess_text)
 # Map ratings to categorical labels
 df['Rating_Category'] = df['Rating'].apply(map_rating)
 
-X = df['Review_Cleaned'].values  # numpy array of cleaned reviews
-y = df['Rating_Category'].values  # numpy array of categorical labels
+X = df['Review_Cleaned'].values
+y = df['Rating_Category'].values
+
+# Balance the dataset using the preprocessing method
+# df_balanced = balance_dataset(df)
+
+# X = df_balanced['Review_Cleaned'].values  # numpy array of cleaned reviews
+# y = df_balanced['Rating_Category'].values  # numpy array of categorical labels
 
 print("Data has been cleaned, and the Rating Category has been mapped.")
+
 
 # Step 2: Split data into train and test sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=42)
@@ -73,59 +67,39 @@ y_test_encoded = to_categorical(y_test_encoded)
 # Step 5: Define CNN architecture, follow their guide from that saved link
 input_layer = Input(shape=(max_length,), dtype='int32')
 
+# Fourth attempt - 0.8261559009552002
 model = Sequential([
-    input_layer,
+    # Embedding layer to convert input text to dense vectors of fixed size
     Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100),
-    Conv1D(filters=128, kernel_size=5, activation='relu'),  # This is the convolution layer(s) which extracts features
-    MaxPooling1D(pool_size=2),  # Breaks the data into smaller sets (2 here) and takes the largest value
-    Flatten(),
-    Dense(64, activation='relu'),  # Relu makes sure that all negative values become positive
-    Dense(len(unique_labels), activation='softmax')  # Softmax gives the probability, e.g. this is most likely positive
+
+    # Convolutional layer to extract features from the embedded representations of the text
+    # L2 regularization added to reduce overfitting
+    # 32 Filters originally, changed to 128, reguliser 0.01 -> 0.05
+    Conv1D(filters=128, kernel_size=3, activation='relu', kernel_regularizer=l2(0.01)),
+
+    # Global max pooling layer to reduce dimensionality and extract the most important features
+    GlobalMaxPooling1D(),
+
+    # Dense layer with ReLU activation to learn complex patterns from the extracted features
+    # L2 regularization added to reduce overfitting
+    Dense(32, activation='relu', kernel_regularizer=l2(0.01)),
+
+    # Dropout layer to reduce overfitting by randomly dropping units during training
+    # Can change this around to get better results
+    Dropout(0.5),
+
+    # Output layer with softmax activation for multi-class classification
+    Dense(len(unique_labels), activation='softmax')
 ])
 
-# New model with more layers - This actually seems a little less accurate
-# model = Sequential([
-#     input_layer,
-#     Embedding(input_dim=len(tokenizer.word_index) + 1, output_dim=100),
-#     Conv1D(filters=128, kernel_size=5, activation='relu'),
-#     MaxPooling1D(pool_size=2),
-#     Conv1D(filters=64, kernel_size=3, activation='relu'),
-#     MaxPooling1D(pool_size=2),
-#     Flatten(),
-#     Dense(128, activation='relu'),
-#     Dropout(0.5),
-#     Dense(64, activation='relu'),
-#     Dropout(0.5),
-#     Dense(len(unique_labels), activation='softmax')
-# ])
-
 # Step 6: Compile and train the model,
-"""
-----Original Model - Pre Stop Word Removal----
-
-0.2 Test Size...........
-10 Epochs = 100% while training and 84% while testing accuracy
-5 Epochs = 98% while training and 82% while testing accuracy
-
-
-0.4 Test Size..........
-5 Epochs = 99.7% while training and 82.4% while testing accuracy
-
-
----- Original Model - Post Stop Word Removal----
-0.4 Test Size...........
-
-"""
-
-
-# model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy', metrics.Precision(),
                                                                           metrics.Recall(), metrics.F1Score()])
-model.fit(X_train_padded, y_train_encoded, validation_data=(X_test_padded, y_test_encoded), epochs=10, batch_size=64)
 
-# Step 7: Evaluate the model - with just accuracy
-# loss, accuracy = model.evaluate(X_test_padded, y_test_encoded)
-# print("Test accuracy:", accuracy)
+# model.fit(X_train_padded, y_train_encoded, validation_data=(X_test_padded, y_test_encoded), epochs=10, batch_size=64)
+history = model.fit(X_train_padded, y_train_encoded, validation_data=(X_test_padded, y_test_encoded),
+                    epochs=10, batch_size=64)
+
 
 # Step 7: Evaluate the model - With all the new metrics added
 results = model.evaluate(X_test_padded, y_test_encoded)
@@ -136,3 +110,29 @@ print("Test loss:", loss)
 print("Test accuracy:", accuracy)
 print("\n\n\n\n\n\n\n\n\n")
 model.summary()
+
+
+# Step 8: Plot the graph
+# Plot the training and validation metrics
+plt.figure(figsize=(12, 6))
+
+# Plot the accuracy
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+
+# Plot the loss
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
